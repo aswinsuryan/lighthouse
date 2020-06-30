@@ -46,7 +46,7 @@ func RunServiceDiscoveryTest(f *lhframework.Framework) {
 	nginxServiceClusterB := f.NewNginxService(framework.ClusterB)
 	f.NewServiceExport(framework.ClusterB, nginxServiceClusterB.Name, nginxServiceClusterB.Namespace)
 
-	se := f.GetServiceExport(framework.ClusterB, nginxServiceClusterB.Name, nginxServiceClusterB.Namespace)
+	se := f.AwaitServiceExportStatusCondition(framework.ClusterB, nginxServiceClusterB.Name, nginxServiceClusterB.Namespace)
 	Expect(se.Status.Conditions[0].Status).To(Equal(corev1.ConditionTrue))
 	Expect(*se.Status.Conditions[0].Message).To(Equal("Service written to the broker Successfully"))
 
@@ -80,7 +80,7 @@ func RunServiceDiscoveryLocalTest(f *lhframework.Framework) {
 	nginxServiceClusterB := f.NewNginxService(framework.ClusterB)
 	f.NewServiceExport(framework.ClusterB, nginxServiceClusterB.Name, nginxServiceClusterB.Namespace)
 
-	se := f.GetServiceExport(framework.ClusterB, nginxServiceClusterB.Name, nginxServiceClusterB.Namespace)
+	se := f.AwaitServiceExportStatusCondition(framework.ClusterB, nginxServiceClusterB.Name, nginxServiceClusterB.Namespace)
 	Expect(se.Status.Conditions[0].Status).To(Equal(corev1.ConditionTrue))
 	Expect(*se.Status.Conditions[0].Message).To(Equal("Service written to the broker Successfully"))
 
