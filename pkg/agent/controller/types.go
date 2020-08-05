@@ -14,6 +14,7 @@ type Controller struct {
 	lighthouseClient    lighthouseClientset.Interface
 	serviceExportSyncer *broker.Syncer
 	serviceSyncer       syncer.Interface
+	siController        *ServiceImportController
 }
 
 type AgentSpecification struct {

@@ -26,8 +26,8 @@ import (
 const (
 	submarinerIpamGlobalIp = "submariner.io/globalIp"
 	serviceUnavailable     = "ServiceUnavailable"
-	originName             = "origin-name"
-	originNamespace        = "origin-namespace"
+	OriginName             = "origin-name"
+	OriginNamespace        = "origin-namespace"
 )
 
 var MaxExportStatusConditions = 10
@@ -55,7 +55,12 @@ func New(spec *AgentSpecification, cfg *rest.Config) (*Controller, error) {
 		return nil, fmt.Errorf("error creating dynamic client: %v", err)
 	}
 
-	return NewWithDetail(spec, syncerConf, restMapper, localClient, kubeClientSet, lighthouseClient, nil,
+	siController, err := NewController(spec, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewWithDetail(spec, syncerConf, restMapper, localClient, kubeClientSet, lighthouseClient, siController, nil,
 		func(config *broker.SyncerConfig) (*broker.Syncer, error) {
 			return broker.NewSyncer(*config)
 		})
@@ -63,8 +68,8 @@ func New(spec *AgentSpecification, cfg *rest.Config) (*Controller, error) {
 
 // Constructor that takes additional detail. This is intended for unit tests.
 func NewWithDetail(spec *AgentSpecification, syncerConf *broker.SyncerConfig, restMapper meta.RESTMapper, localClient dynamic.Interface,
-	kubeClientSet kubernetes.Interface, lighthouseClient lighthouseClientset.Interface, scheme *runtime.Scheme,
-	newSyncer func(*broker.SyncerConfig) (*broker.Syncer, error)) (*Controller, error) {
+	kubeClientSet kubernetes.Interface, lighthouseClient lighthouseClientset.Interface, sicontroller *ServiceImportController,
+	scheme *runtime.Scheme, newSyncer func(*broker.SyncerConfig) (*broker.Syncer, error)) (*Controller, error) {
 	agentController := &Controller{
 		clusterID:        spec.ClusterID,
 		globalnetEnabled: spec.GlobalnetEnabled,
@@ -108,6 +113,8 @@ func NewWithDetail(spec *AgentSpecification, syncerConf *broker.SyncerConfig, re
 		return nil, err
 	}
 
+	agentController.siController = sicontroller
+
 	return agentController, nil
 }
 
@@ -125,6 +132,10 @@ func (a *Controller) Start(stopCh <-chan struct{}) error {
 	}
 
 	if err := a.serviceSyncer.Start(stopCh); err != nil {
+		return err
+	}
+
+	if err := a.siController.Start(stopCh); err != nil {
 		return err
 	}
 
@@ -166,8 +177,16 @@ func (a *Controller) serviceExportToRemoteServiceImport(obj runtime.Object, op s
 		return nil, true
 	}
 
+	var importType lighthousev2a1.ServiceImportType
+
+	if svc.Spec.ClusterIP == "None" {
+		importType = lighthousev2a1.Headless
+	} else {
+		importType = lighthousev2a1.SuperclusterIP
+	}
+
 	serviceImport.Spec = lighthousev2a1.ServiceImportSpec{
-		Type: lighthousev2a1.SuperclusterIP,
+		Type: importType,
 	}
 	serviceImport.Status = lighthousev2a1.ServiceImportStatus{
 		Clusters: []lighthousev2a1.ClusterStatus{
@@ -188,7 +207,7 @@ func (a *Controller) onSuccessfulServiceImportSync(synced runtime.Object, op syn
 
 	serviceImport := synced.(*lighthousev2a1.ServiceImport)
 
-	a.updateExportedServiceStatus(serviceImport.GetAnnotations()[originName], serviceImport.GetAnnotations()[originNamespace],
+	a.updateExportedServiceStatus(serviceImport.GetAnnotations()[OriginName], serviceImport.GetAnnotations()[OriginNamespace],
 		lighthousev2a1.ServiceExportExported, corev1.ConditionTrue,
 		"", "Service was successfully synced to the broker")
 }
@@ -285,8 +304,8 @@ func (a *Controller) newServiceImport(svcExport *lighthousev2a1.ServiceExport) *
 		ObjectMeta: metav1.ObjectMeta{
 			Name: svcExport.Name + "-" + svcExport.Namespace + "-" + a.clusterID,
 			Annotations: map[string]string{
-				originName:      svcExport.Name,
-				originNamespace: svcExport.Namespace,
+				OriginName:      svcExport.Name,
+				OriginNamespace: svcExport.Namespace,
 			},
 		},
 	}

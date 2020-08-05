@@ -231,8 +231,8 @@ func newTestDiver() *testDriver {
 		Expect(lighthousev2a1.AddToScheme(syncerScheme)).To(Succeed())
 
 		var err error
-		t.agentController, err = controller.NewWithDetail(t.agentSpec, syncerConfig, t.restMapper, t.localDynClient,
-			t.localServiceClient, t.lighthouseClient, syncerScheme, func(config *broker.SyncerConfig) (*broker.Syncer, error) {
+		t.agentController, err = controller.NewWithDetail(t.agentSpec, syncerConfig, t.restMapper, t.localDynClient, t.localServiceClient,
+			t.lighthouseClient, nil, syncerScheme, func(config *broker.SyncerConfig) (*broker.Syncer, error) {
 				return broker.NewSyncerWithDetail(config, t.localDynClient, t.brokerDynClient, t.restMapper)
 			})
 
