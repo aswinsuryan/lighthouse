@@ -67,7 +67,7 @@ func New(spec *AgentSpecification, syncerConf broker.SyncerConfig, kubeClientSet
 
 	syncerConf.ResourceConfigs = []broker.ResourceConfig{
 		{
-			LocalSourceNamespace: metav1.NamespaceAll,
+			LocalSourceNamespace: spec.Namespace,
 			LocalResourceType:    &mcsv1a1.ServiceImport{},
 			BrokerResourceType:   &mcsv1a1.ServiceImport{},
 		},
@@ -131,7 +131,7 @@ func New(spec *AgentSpecification, syncerConf broker.SyncerConfig, kubeClientSet
 		return nil, err
 	}
 
-	agentController.serviceImportController, err = newServiceImportController(spec, agentController.serviceSyncer,
+	agentController.serviceImportController, err = newServiceImportController(spec, syncerConf, agentController.serviceSyncer,
 		syncerConf.RestMapper, syncerConf.LocalClient, syncerConf.Scheme)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func (a *Controller) Start(stopCh <-chan struct{}) error {
 		return err
 	}
 
-	klog.Info("Agent controller started")
+	klog.Info("Agent controller started123")
 
 	return nil
 }

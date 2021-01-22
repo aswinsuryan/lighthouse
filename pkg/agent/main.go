@@ -41,6 +41,7 @@ func main() {
 	agentSpec := controller.AgentSpecification{}
 
 	klog.InitFlags(nil)
+	klog.Error("My new Image")
 
 	flag.Parse()
 

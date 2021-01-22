@@ -58,6 +58,7 @@ type ServiceImportController struct {
 	endpointControllers sync.Map
 	clusterID           string
 	scheme              *runtime.Scheme
+	serviceImportClient dynamic.NamespaceableResourceInterface
 }
 
 // Each EndpointController listens for the endpoints that backs a service and have a ServiceImport
